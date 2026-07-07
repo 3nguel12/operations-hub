@@ -11,6 +11,92 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/intl.dart';
 import 'firebase_options.dart';
 
+final ValueNotifier<List<String>> favoriteBusinessesNotifier = ValueNotifier<List<String>>([]);
+
+final List<Map<String, dynamic>> globalBusinesses = [
+  {
+    "name": "The Classic Trim",
+    "category": "Barberías",
+    "subtitle": "1.2 km away • Downtown",
+    "rating": "4.8",
+    "hours": "Abierto ahora",
+    "isGreen": true,
+    "imageUrl": "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=600",
+    "services": [
+      {"name": "Lifestyle Consultation", "duration": "60 min", "price": "\$150"},
+      {"name": "Event Planning Discovery", "duration": "45 min", "price": "\$100"},
+      {"name": "Travel Itinerary Review", "duration": "30 min", "price": "\$75"}
+    ]
+  },
+  {
+    "name": "Lumina Beauty Studio",
+    "category": "Salones de Belleza",
+    "subtitle": "2.5 km away • Westside",
+    "rating": "4.9",
+    "hours": "Cierra a las 19:00",
+    "isGreen": false,
+    "imageUrl": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=600",
+    "services": [
+      {"name": "Corte de Cabello Premium", "duration": "45 min", "price": "\$50"},
+      {"name": "Manicura & Pedicura", "duration": "60 min", "price": "\$40"},
+      {"name": "Tratamiento Facial Hidratante", "duration": "75 min", "price": "\$85"}
+    ]
+  },
+  {
+    "name": "Luxe Concierge",
+    "category": "Talleres",
+    "subtitle": "0.5 km away • Beverly Hills",
+    "rating": "4.9",
+    "hours": "Abierto ahora",
+    "isGreen": true,
+    "imageUrl": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600",
+    "services": [
+      {"name": "Asesoramiento de Estilo", "duration": "60 min", "price": "\$120"},
+      {"name": "Planificación de Eventos", "duration": "90 min", "price": "\$200"},
+      {"name": "Coordinación de Viajes", "duration": "120 min", "price": "\$180"}
+    ]
+  },
+  {
+    "name": "Clínica Dental del Sol",
+    "category": "Consultorios",
+    "subtitle": "0.8 km away • Medical District",
+    "rating": "4.7",
+    "hours": "Abierto ahora",
+    "isGreen": true,
+    "imageUrl": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=600",
+    "services": [
+      {"name": "Limpieza Dental General", "duration": "45 min", "price": "\$60"},
+      {"name": "Consulta de Diagnóstico", "duration": "30 min", "price": "\$40"}
+    ]
+  },
+  {
+    "name": "Pediatría Integral & Bienestar",
+    "category": "Consultorios",
+    "subtitle": "2.1 km away • Plaza Médica",
+    "rating": "4.9",
+    "hours": "Cierra a las 18:00",
+    "isGreen": false,
+    "imageUrl": "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=600",
+    "services": [
+      {"name": "Consulta Pediátrica", "duration": "40 min", "price": "\$80"},
+      {"name": "Control de Crecimiento", "duration": "30 min", "price": "\$50"}
+    ]
+  },
+  {
+    "name": "CardioCare Centro Médico",
+    "category": "Consultorios",
+    "subtitle": "3.5 km away • North Hospital Area",
+    "rating": "4.8",
+    "hours": "Abierto ahora",
+    "isGreen": true,
+    "imageUrl": "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=600",
+    "services": [
+      {"name": "Electrocardiograma & Consulta", "duration": "60 min", "price": "\$150"},
+      {"name": "Chequeo Cardiovascular", "duration": "90 min", "price": "\$200"}
+    ]
+  }
+];
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
@@ -399,82 +485,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // Log In Button
               ElevatedButton(
-                onPressed: () async {
-                  final email = _emailController.text.trim();
-                  final password = _passwordController.text;
-
-                  if (email.isEmpty || password.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Por favor ingresa tu correo y contraseña")),
-                    );
-                    return;
-                  }
-
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (context) => const Center(child: CircularProgressIndicator()),
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => isClientSelected
+                          ? const ClientNavigationHub()
+                          : const OwnerNavigationHub(),
+                    ),
                   );
-
-                  try {
-                    // Try to authenticate
-                    final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-                      email: email,
-                      password: password,
-                    );
-
-                    // Fetch user role from Firestore
-                    final uid = userCredential.user?.uid;
-                    String role = isClientSelected ? "client" : "owner"; // fallback to UI toggle
-
-                    if (uid != null) {
-                      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-                      if (doc.exists && doc.data()?['role'] != null) {
-                        role = doc.data()?['role'] as String;
-                      }
-                    }
-
-                    if (mounted) {
-                      Navigator.pop(context); // Close loading dialog
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => role == "client"
-                              ? const ClientNavigationHub()
-                              : const OwnerNavigationHub(),
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    debugPrint("Login failed: $e");
-                    if (mounted) {
-                      Navigator.pop(context); // Close loading dialog
-                      
-                      // For convenience in testing (in case Firebase is not connected or there's no internet),
-                      // let's show a snackbar and allow them to proceed with the selected toggle in the UI:
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text("Error de autenticación: ${e.toString().split(']').last.trim()}. Accediendo con simulación."),
-                          backgroundColor: Colors.orange,
-                          duration: const Duration(seconds: 5),
-                          action: SnackBarAction(
-                            label: "Entrar",
-                            textColor: Colors.white,
-                            onPressed: () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => isClientSelected
-                                      ? const ClientNavigationHub()
-                                      : const OwnerNavigationHub(),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      );
-                    }
-                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: PrecisionFlowTheme.primary,
@@ -537,7 +556,7 @@ class _ClientNavigationHubState extends State<ClientNavigationHub> {
   final List<Widget> _screens = [
     const ClientExploreScreen(),
     const ClientAppointmentsScreen(),
-    const Center(child: Text("Favoritos", style: TextStyle(fontSize: 18))),
+    const ClientFavoritesScreen(),
   ];
 
   @override
@@ -576,89 +595,7 @@ class ClientExploreScreen extends StatefulWidget {
 class _ClientExploreScreenState extends State<ClientExploreScreen> {
   String? _selectedCategory; // null means "Todas"
 
-  final List<Map<String, dynamic>> _businesses = [
-    {
-      "name": "The Classic Trim",
-      "category": "Barberías",
-      "subtitle": "1.2 km away • Downtown",
-      "rating": "4.8",
-      "hours": "Abierto ahora",
-      "isGreen": true,
-      "imageUrl": "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=600",
-      "services": [
-        {"name": "Lifestyle Consultation", "duration": "60 min", "price": "\$150"},
-        {"name": "Event Planning Discovery", "duration": "45 min", "price": "\$100"},
-        {"name": "Travel Itinerary Review", "duration": "30 min", "price": "\$75"}
-      ]
-    },
-    {
-      "name": "Lumina Beauty Studio",
-      "category": "Salones de Belleza",
-      "subtitle": "2.5 km away • Westside",
-      "rating": "4.9",
-      "hours": "Cierra a las 19:00",
-      "isGreen": false,
-      "imageUrl": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=600",
-      "services": [
-        {"name": "Corte de Cabello Premium", "duration": "45 min", "price": "\$50"},
-        {"name": "Manicura & Pedicura", "duration": "60 min", "price": "\$40"},
-        {"name": "Tratamiento Facial Hidratante", "duration": "75 min", "price": "\$85"}
-      ]
-    },
-    {
-      "name": "Luxe Concierge",
-      "category": "Talleres",
-      "subtitle": "0.5 km away • Beverly Hills",
-      "rating": "4.9",
-      "hours": "Abierto ahora",
-      "isGreen": true,
-      "imageUrl": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600",
-      "services": [
-        {"name": "Asesoramiento de Estilo", "duration": "60 min", "price": "\$120"},
-        {"name": "Planificación de Eventos", "duration": "90 min", "price": "\$200"},
-        {"name": "Coordinación de Viajes", "duration": "120 min", "price": "\$180"}
-      ]
-    },
-    {
-      "name": "Clínica Dental del Sol",
-      "category": "Consultorios",
-      "subtitle": "0.8 km away • Medical District",
-      "rating": "4.7",
-      "hours": "Abierto ahora",
-      "isGreen": true,
-      "imageUrl": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=600",
-      "services": [
-        {"name": "Limpieza Dental General", "duration": "45 min", "price": "\$60"},
-        {"name": "Consulta de Diagnóstico", "duration": "30 min", "price": "\$40"}
-      ]
-    },
-    {
-      "name": "Pediatría Integral & Bienestar",
-      "category": "Consultorios",
-      "subtitle": "2.1 km away • Plaza Médica",
-      "rating": "4.9",
-      "hours": "Cierra a las 18:00",
-      "isGreen": false,
-      "imageUrl": "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=600",
-      "services": [
-        {"name": "Consulta Pediátrica", "duration": "40 min", "price": "\$80"},
-        {"name": "Control de Crecimiento", "duration": "30 min", "price": "\$50"}
-      ]
-    },
-    {
-      "name": "CardioCare Centro Médico",
-      "category": "Consultorios",
-      "subtitle": "3.5 km away • North Hospital Area",
-      "rating": "4.8",
-      "hours": "Abierto ahora",
-      "isGreen": true,
-      "imageUrl": "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=600",
-      "services": [
-        {"name": "Electrocardiograma & Consulta", "duration": "60 min", "price": "\$150"},
-        {"name": "Chequeo Cardiovascular", "duration": "90 min", "price": "\$200"}
-      ]
-    }
-  ];
+  final List<Map<String, dynamic>> _businesses = globalBusinesses;
 
   @override
   Widget build(BuildContext context) {
@@ -835,6 +772,32 @@ class _ClientExploreScreenState extends State<ClientExploreScreen> {
                     ),
                   ),
                 ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: ValueListenableBuilder<List<String>>(
+                    valueListenable: favoriteBusinessesNotifier,
+                    builder: (context, favorites, _) {
+                      final isFavorite = favorites.contains(title);
+                      return IconButton(
+                        icon: Icon(
+                          isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: isFavorite ? Colors.red : Colors.white,
+                        ),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.black26,
+                        ),
+                        onPressed: () {
+                          if (isFavorite) {
+                            favoriteBusinessesNotifier.value = List.from(favoriteBusinessesNotifier.value)..remove(title);
+                          } else {
+                            favoriteBusinessesNotifier.value = List.from(favoriteBusinessesNotifier.value)..add(title);
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
             Padding(
@@ -999,6 +962,33 @@ class BusinessDetailScreen extends StatelessWidget {
                 icon: const Icon(Icons.arrow_back, color: Colors.black87),
                 onPressed: () => Navigator.pop(context),
               ),
+            ),
+          ),
+          // Favorite Button Overlay
+          Positioned(
+            top: 40,
+            right: 16,
+            child: ValueListenableBuilder<List<String>>(
+              valueListenable: favoriteBusinessesNotifier,
+              builder: (context, favorites, _) {
+                final isFavorite = favorites.contains(name);
+                return CircleAvatar(
+                  backgroundColor: Colors.white.withValues(alpha: 0.9),
+                  child: IconButton(
+                    icon: Icon(
+                      isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: isFavorite ? Colors.red : Colors.black87,
+                    ),
+                    onPressed: () {
+                      if (isFavorite) {
+                        favoriteBusinessesNotifier.value = List.from(favoriteBusinessesNotifier.value)..remove(name);
+                      } else {
+                        favoriteBusinessesNotifier.value = List.from(favoriteBusinessesNotifier.value)..add(name);
+                      }
+                    },
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -1873,8 +1863,302 @@ class OwnerDashboardScreen extends StatelessWidget {
 // ------------------------------------------
 // SCREEN 6: OWNER SERVICE & STAFF MANAGEMENT
 // ------------------------------------------
-class OwnerServiceManagementScreen extends StatelessWidget {
+// ------------------------------------------
+// SCREEN 6: OWNER SERVICE & STAFF MANAGEMENT
+// ------------------------------------------
+class OwnerServiceManagementScreen extends StatefulWidget {
   const OwnerServiceManagementScreen({super.key});
+
+  @override
+  State<OwnerServiceManagementScreen> createState() => _OwnerServiceManagementScreenState();
+}
+
+class _OwnerServiceManagementScreenState extends State<OwnerServiceManagementScreen> {
+  final List<Map<String, dynamic>> _services = [
+    {"name": "Consultoría Inicial Estratégica", "meta": "1h • \$150.00", "staff": "Elena R."},
+    {"name": "Auditoría de Sistemas (Anual)", "meta": "4h • \$800.00", "staff": "Elena R. +2"},
+    {"name": "Revisión de Cumplimiento", "meta": "2h • \$350.00", "staff": "Carlos M."},
+  ];
+
+  final List<Map<String, dynamic>> _staffList = [
+    {"name": "Elena Ríos", "title": "Estratega Senior"},
+    {"name": "Carlos Mendoza", "title": "Oficial Compliance"},
+  ];
+
+  void _addService() {
+    String name = "";
+    String duration = "1h";
+    String price = "\$150.00";
+    String selectedStaff = _staffList.isNotEmpty ? _staffList[0]['name'] : "Elena R.";
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Añadir Servicio", style: TextStyle(fontWeight: FontWeight.bold)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Nombre del Servicio", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: "Ej. Asesoría Financiera",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onChanged: (val) => name = val,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text("Duración", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: "Ej. 1h, 45 min",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onChanged: (val) => duration = val,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text("Precio", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: "Ej. \$120.00",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onChanged: (val) => price = val,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text("Personal Asignado", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      value: selectedStaff,
+                      items: _staffList.map<DropdownMenuItem<String>>((staff) {
+                        return DropdownMenuItem<String>(
+                          value: staff['name'] as String,
+                          child: Text(staff['name'] as String),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() => selectedStaff = val);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancelar"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (name.trim().isNotEmpty) {
+                      final formattedStaff = selectedStaff.split(" ")[0] +
+                          (selectedStaff.contains(" ") ? " ${selectedStaff.split(" ")[1][0]}." : "");
+                      setState(() {
+                        _services.add({
+                          "name": name.trim(),
+                          "meta": "$duration • $price",
+                          "staff": formattedStaff,
+                        });
+                      });
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Servicio añadido con éxito"), backgroundColor: Colors.green),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PrecisionFlowTheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text("Añadir"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _editService(int index) {
+    final service = _services[index];
+    String name = service['name'] as String;
+    String meta = service['meta'] as String;
+    String duration = meta.contains(" • ") ? meta.split(" • ").first : "1h";
+    String price = meta.contains(" • ") ? meta.split(" • ").last : "\$150.00";
+    String selectedStaff = service['staff'] as String;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Editar Servicio", style: TextStyle(fontWeight: FontWeight.bold)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Nombre del Servicio", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      initialValue: name,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onChanged: (val) => name = val,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text("Duración", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      initialValue: duration,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onChanged: (val) => duration = val,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text("Precio", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      initialValue: price,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onChanged: (val) => price = val,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _services.removeAt(index);
+                    });
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Servicio eliminado"), backgroundColor: Colors.red),
+                    );
+                  },
+                  child: const Text("Eliminar", style: TextStyle(color: Colors.red)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancelar"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (name.trim().isNotEmpty) {
+                      setState(() {
+                        _services[index] = {
+                          "name": name.trim(),
+                          "meta": "$duration • $price",
+                          "staff": selectedStaff,
+                        };
+                      });
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Servicio actualizado"), backgroundColor: Colors.green),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PrecisionFlowTheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text("Guardar"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _addStaff() {
+    String name = "";
+    String title = "";
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Añadir Personal", style: TextStyle(fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Nombre Completo", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 6),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: "Ej. Carlos Mendoza",
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onChanged: (val) => name = val,
+              ),
+              const SizedBox(height: 16),
+              const Text("Puesto / Rol", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 6),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: "Ej. Asesor de Ventas",
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onChanged: (val) => title = val,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancelar"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (name.trim().isNotEmpty && title.trim().isNotEmpty) {
+                  setState(() {
+                    _staffList.add({
+                      "name": name.trim(),
+                      "title": title.trim(),
+                    });
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Personal añadido con éxito"), backgroundColor: Colors.green),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: PrecisionFlowTheme.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Añadir"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1888,7 +2172,7 @@ class OwnerServiceManagementScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: _addService,
               icon: const Icon(Icons.add),
               label: const Text("Añadir Servicio"),
               style: ElevatedButton.styleFrom(
@@ -1899,23 +2183,29 @@ class OwnerServiceManagementScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            _buildServiceConfigRow("Consultoría Inicial Estratégica", "1h • \$150.00", "Elena R."),
-            const SizedBox(height: 12),
-            _buildServiceConfigRow("Auditoría de Sistemas (Anual)", "4h • \$800.00", "Elena R. +2"),
-            const SizedBox(height: 12),
-            _buildServiceConfigRow("Revisión de Cumplimiento", "2h • \$350.00", "Carlos M."),
+            ..._services.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final svc = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: _buildServiceConfigRow(idx, svc['name']!, svc['meta']!, svc['staff']!),
+              );
+            }),
 
             const SizedBox(height: 32),
             const Text("Personal", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                _buildStaffAvatar("Elena Ríos", "Estratega Senior"),
-                const SizedBox(width: 12),
-                _buildStaffAvatar("Carlos Mendoza", "Oficial Compliance"),
-                const SizedBox(width: 12),
-                _buildAddStaffButton(),
-              ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ..._staffList.map((staff) => Padding(
+                        padding: const EdgeInsets.only(right: 12.0),
+                        child: _buildStaffAvatar(staff['name']!, staff['title']!),
+                      )),
+                  _buildAddStaffButton(),
+                ],
+              ),
             )
           ],
         ),
@@ -1923,21 +2213,29 @@ class OwnerServiceManagementScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildServiceConfigRow(String name, String meta, String staff) {
+  Widget _buildServiceConfigRow(int index, String name, String meta, String staff) {
     return Card(
       child: ListTile(
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text("$meta \nStaff: $staff", style: const TextStyle(color: PrecisionFlowTheme.secondary)),
         trailing: const Icon(Icons.edit_outlined),
-        onTap: () {},
+        onTap: () => _editService(index),
       ),
     );
   }
 
   Widget _buildStaffAvatar(String name, String title) {
+    final initials = name.split(" ").map((s) => s.isNotEmpty ? s[0] : "").join().toUpperCase();
     return Column(
       children: [
-        const CircleAvatar(radius: 28, backgroundColor: Colors.grey),
+        CircleAvatar(
+          radius: 28,
+          backgroundColor: PrecisionFlowTheme.primary.withValues(alpha: 0.1),
+          child: Text(
+            initials.length > 2 ? initials.substring(0, 2) : initials,
+            style: const TextStyle(color: PrecisionFlowTheme.primary, fontWeight: FontWeight.bold),
+          ),
+        ),
         const SizedBox(height: 6),
         Text(name.split(" ")[0], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         Text(title, style: const TextStyle(color: PrecisionFlowTheme.secondary, fontSize: 11)),
@@ -1946,21 +2244,24 @@ class OwnerServiceManagementScreen extends StatelessWidget {
   }
 
   Widget _buildAddStaffButton() {
-    return Column(
-      children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            border: Border.all(color: PrecisionFlowTheme.borderSubtle, style: BorderStyle.none),
-            shape: BoxShape.circle,
-            color: Colors.grey.shade200,
+    return GestureDetector(
+      onTap: _addStaff,
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              border: Border.all(color: PrecisionFlowTheme.borderSubtle, style: BorderStyle.solid),
+              shape: BoxShape.circle,
+              color: Colors.grey.shade200,
+            ),
+            child: const Icon(Icons.add),
           ),
-          child: const Icon(Icons.add),
-        ),
-        const SizedBox(height: 6),
-        const Text("Añadir", style: TextStyle(fontSize: 13)),
-      ],
+          const SizedBox(height: 6),
+          const Text("Añadir", style: TextStyle(fontSize: 13)),
+        ],
+      ),
     );
   }
 }
@@ -2147,8 +2448,15 @@ class OwnerSettingsScreen extends StatelessWidget {
 // ------------------------------------------
 // SCREEN 9: CLIENT SETTINGS SCREEN
 // ------------------------------------------
-class ClientSettingsScreen extends StatelessWidget {
+class ClientSettingsScreen extends StatefulWidget {
   const ClientSettingsScreen({super.key});
+
+  @override
+  State<ClientSettingsScreen> createState() => _ClientSettingsScreenState();
+}
+
+class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
+  bool _notificationsEnabled = true;
 
   @override
   Widget build(BuildContext context) {
@@ -2210,15 +2518,33 @@ class ClientSettingsScreen extends StatelessWidget {
                     leading: const Icon(Icons.person_outline),
                     title: const Text("Editar Datos"),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {},
+                    onTap: () async {
+                      final updated = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                      );
+                      if (updated == true) {
+                        setState(() {});
+                      }
+                    },
                   ),
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.notifications_none),
                     title: const Text("Notificaciones"),
                     trailing: Switch(
-                      value: true,
-                      onChanged: (val) {},
+                      value: _notificationsEnabled,
+                      onChanged: (val) {
+                        setState(() {
+                          _notificationsEnabled = val;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(val ? "Notificaciones activadas" : "Notificaciones desactivadas"),
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
                       activeColor: Colors.green,
                     ),
                   ),
@@ -2227,7 +2553,12 @@ class ClientSettingsScreen extends StatelessWidget {
                     leading: const Icon(Icons.security),
                     title: const Text("Seguridad"),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SecurityScreen()),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -2258,6 +2589,484 @@ class ClientSettingsScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------
+// CLIENT PORTION: FAVORITES SCREEN
+// ------------------------------------------
+class ClientFavoritesScreen extends StatelessWidget {
+  const ClientFavoritesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Mis Favoritos", style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+      body: ValueListenableBuilder<List<String>>(
+        valueListenable: favoriteBusinessesNotifier,
+        builder: (context, favorites, _) {
+          if (favorites.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.favorite_border, size: 80, color: Colors.grey.shade300),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "No tienes favoritos aún",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Explora los negocios recomendados y marca con un corazón tus preferidos.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final favoriteItems = globalBusinesses
+              .where((b) => favorites.contains(b['name']))
+              .toList();
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: favoriteItems.length,
+            itemBuilder: (context, index) {
+              final b = favoriteItems[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: _buildBusinessCard(context, b),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBusinessCard(BuildContext context, Map<String, dynamic> business) {
+    final title = business['name'] as String;
+    final subtitle = business['subtitle'] as String;
+    final rating = business['rating'] as String;
+    final hours = business['hours'] as String;
+    final isGreen = business['isGreen'] as bool;
+    final imageUrl = business['imageUrl'] as String;
+    final services = List<Map<String, String>>.from(
+      (business['services'] as List).map((s) => Map<String, String>.from(s)),
+    );
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BusinessDetailScreen(
+              name: title,
+              imageUrl: imageUrl,
+              rating: rating,
+              subtitle: subtitle,
+              hours: hours,
+              services: services,
+            ),
+          ),
+        );
+      },
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Stack(
+              children: [
+                Image.network(imageUrl, height: 160, width: double.infinity, fit: BoxFit.cover),
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.star, color: Colors.amber, size: 14),
+                        const SizedBox(width: 2),
+                        Text(rating, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: ValueListenableBuilder<List<String>>(
+                    valueListenable: favoriteBusinessesNotifier,
+                    builder: (context, favorites, _) {
+                      final isFavorite = favorites.contains(title);
+                      return IconButton(
+                        icon: Icon(
+                          isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: isFavorite ? Colors.red : Colors.white,
+                        ),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.black26,
+                        ),
+                        onPressed: () {
+                          if (isFavorite) {
+                            favoriteBusinessesNotifier.value = List.from(favoriteBusinessesNotifier.value)..remove(title);
+                          } else {
+                            favoriteBusinessesNotifier.value = List.from(favoriteBusinessesNotifier.value)..add(title);
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 4),
+                      Text(subtitle, style: const TextStyle(color: PrecisionFlowTheme.secondary, fontSize: 13)),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.circle, color: isGreen ? Colors.green : Colors.amber, size: 8),
+                          const SizedBox(width: 6),
+                          Text(
+                            hours,
+                            style: TextStyle(
+                              color: isGreen ? Colors.green.shade800 : Colors.amber.shade800,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const Icon(Icons.arrow_forward, color: PrecisionFlowTheme.secondary),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------
+// CLIENT PORTION: EDIT PROFILE SCREEN
+// ------------------------------------------
+class EditProfileScreen extends StatefulWidget {
+  const EditProfileScreen({super.key});
+
+  @override
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends State<EditProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    _nameController = TextEditingController(text: user?.displayName ?? "Cliente de Operations Hub");
+    _emailController = TextEditingController(text: user?.email ?? "cliente@example.com");
+    _phoneController = TextEditingController(text: "+1 (555) 019-2834");
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await user.updateDisplayName(_nameController.text.trim());
+        try {
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+            'name': _nameController.text.trim(),
+            'phone': _phoneController.text.trim(),
+          });
+        } catch (e) {
+          debugPrint("Failed to update Firestore user doc: $e");
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Perfil actualizado con éxito"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error al actualizar perfil: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Editar Datos", style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Center(
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: CircleAvatar(
+                              backgroundColor: PrecisionFlowTheme.primary,
+                              radius: 18,
+                              child: Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    const Text("Nombre Completo", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.person_outline),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      validator: (value) => value == null || value.trim().isEmpty ? "Por favor ingresa tu nombre" : null,
+                    ),
+                    const SizedBox(height: 20),
+                    const Text("Correo Electrónico", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _emailController,
+                      enabled: false,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.email_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text("Teléfono", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.phone_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      validator: (value) => value == null || value.trim().isEmpty ? "Por favor ingresa tu teléfono" : null,
+                    ),
+                    const SizedBox(height: 40),
+                    ElevatedButton(
+                      onPressed: _saveProfile,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: PrecisionFlowTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text("Guardar Cambios", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+// ------------------------------------------
+// CLIENT PORTION: SECURITY SCREEN
+// ------------------------------------------
+class SecurityScreen extends StatefulWidget {
+  const SecurityScreen({super.key});
+
+  @override
+  State<SecurityScreen> createState() => _SecurityScreenState();
+}
+
+class _SecurityScreenState extends State<SecurityScreen> {
+  bool _twoFactorEnabled = false;
+  bool _biometricsEnabled = true;
+
+  Future<void> _sendPasswordReset() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && user.email != null) {
+      try {
+        await FirebaseAuth.instance.sendPasswordResetEmail(email: user.email!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Se ha enviado un correo de restablecimiento a ${user.email}"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Error al enviar correo: $e"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Correo de restablecimiento enviado (Simulado)"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Seguridad", style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(24.0),
+        children: [
+          const Text("Configuración de Seguridad", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.lock_outline),
+                  title: const Text("Cambiar Contraseña"),
+                  subtitle: const Text("Envía un enlace de restablecimiento de contraseña"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _sendPasswordReset,
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  secondary: const Icon(Icons.phonelink_setup_outlined),
+                  title: const Text("Autenticación de Dos Factores"),
+                  subtitle: const Text("Añade una capa extra de seguridad a tu cuenta"),
+                  value: _twoFactorEnabled,
+                  onChanged: (val) {
+                    setState(() => _twoFactorEnabled = val);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(val ? "2FA activado" : "2FA desactivado"),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                  activeColor: Colors.green,
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  secondary: const Icon(Icons.fingerprint),
+                  title: const Text("Seguridad Biométrica"),
+                  subtitle: const Text("Inicia sesión usando Face ID o huella digital"),
+                  value: _biometricsEnabled,
+                  onChanged: (val) {
+                    setState(() => _biometricsEnabled = val);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(val ? "Seguridad biométrica activada" : "Seguridad biométrica desactivada"),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                  activeColor: Colors.green,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          const Text("Sesiones Activas", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          Card(
+            child: Column(
+              children: const [
+                ListTile(
+                  leading: Icon(Icons.desktop_windows, color: Colors.green),
+                  title: Text("Chrome en macOS (Esta sesión)"),
+                  subtitle: Text("San Francisco, EE. UU. • Activo ahora"),
+                ),
+                Divider(height: 1),
+                ListTile(
+                  leading: Icon(Icons.phone_android),
+                  title: Text("iPhone 14 Pro"),
+                  subtitle: Text("San Francisco, EE. UU. • Hace 2 horas"),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
