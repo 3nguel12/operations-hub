@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "731684064184",
+    "project_id": "operations-hub-73660",
+    "storage_bucket": "operations-hub-73660.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:731684064184:android:d7ef74052e5c99e1e9dd4d",
+        "android_client_info": {
+          "package_name": "com.example.operations_hub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzXQUc-YN4nvMNk-gmMQPMOPY2j_4Juj4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
